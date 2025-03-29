@@ -1,91 +1,100 @@
 package com.epam.training.gen.ai.service;
 
-import com.azure.ai.openai.OpenAIAsyncClient;
-import com.azure.ai.openai.OpenAIClientBuilder;
-import com.azure.core.credential.AzureKeyCredential;
 import com.epam.training.gen.ai.config.OpenAiClientConfig;
-import com.microsoft.semantickernel.Kernel;
-import com.microsoft.semantickernel.aiservices.openai.chatcompletion.OpenAIChatCompletion;
 import com.microsoft.semantickernel.orchestration.InvocationContext;
 import com.microsoft.semantickernel.orchestration.InvocationReturnMode;
 import com.microsoft.semantickernel.orchestration.PromptExecutionSettings;
 import com.microsoft.semantickernel.orchestration.ToolCallBehavior;
-import com.microsoft.semantickernel.services.chatcompletion.AuthorRole;
-import com.microsoft.semantickernel.services.chatcompletion.ChatCompletionService;
 import com.microsoft.semantickernel.services.chatcompletion.ChatHistory;
-import com.microsoft.semantickernel.services.chatcompletion.ChatMessageContent;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Set;
 
+@Slf4j
 @Service
 public class ChatService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ChatService.class);
+    private static final String DEFAULT_DEPLOYMENT_NAME = "default";
 
-    private final ChatCompletionService chatCompletionService;
-    private final Kernel kernel;
+    private final OpenAiClientConfig openAiClientConfig;
+    private final ChatCompletable defaultChatCompletion;
+    private final Map<String, ChatCompletable> chatCompletions;
     private final InvocationContext invocationContext;
-    private final ChatHistory chatHistory;
 
-    public ChatService(OpenAiClientConfig openAiClientConfig) {
+    private ChatHistory chatHistory;
 
-        OpenAIAsyncClient client = new OpenAIClientBuilder()
-                .credential(new AzureKeyCredential(openAiClientConfig.aiKey()))
-                .endpoint(openAiClientConfig.aiEndpoint())
-                .buildAsyncClient();
+    public ChatService(OpenAiClientConfig openAiClientConfig, Map<String, ChatCompletable> chatCompletions) {
 
-        this.chatCompletionService = OpenAIChatCompletion.builder()
-                .withModelId(openAiClientConfig.aiDeploymentName())
-                .withOpenAIAsyncClient(client)
-                .build();
+        this.openAiClientConfig = openAiClientConfig;
 
-        this.kernel = Kernel.builder()
-                .withAIService(ChatCompletionService.class, chatCompletionService)
-                .build();
+        var deploymentName = openAiClientConfig.getDeploymentName();
+
+        this.defaultChatCompletion = chatCompletions.get(deploymentName);
+        if (this.defaultChatCompletion == null) {
+            throw new RuntimeException(String.format("Invalid default deployment name: %s", deploymentName));
+        }
+
+        this.chatCompletions = chatCompletions;
 
         /* Enable planning */
         this.invocationContext = new InvocationContext.Builder()
                 .withReturnMode(InvocationReturnMode.LAST_MESSAGE_ONLY)
                 .withToolCallBehavior(ToolCallBehavior.allowAllKernelFunctions(true))
                 .withPromptExecutionSettings(
-                        PromptExecutionSettings.builder().withTemperature(openAiClientConfig.executionTemperature()).build()
+                        PromptExecutionSettings.builder().withTemperature(openAiClientConfig.getExecutionTemperature()).build()
                 )
                 .build();
 
-        this.chatHistory = new ChatHistory();
-        this.chatHistory.addSystemMessage(openAiClientConfig.systemPrompt());
+        resetChatHistory();
     }
 
-    public String getResponse(String message) {
+    /**
+     * Retrieve names of all supported deployments.
+     *
+     * @return Set of supported deployment names
+     */
+    public Set<String> getDeploymentNames() {
+        return chatCompletions.keySet();
+    }
 
-        logger.trace("User input: {}", message);
+    /**
+     * Reset chat history and set default system prompt.
+     */
+    public void resetChatHistory() {
+        chatHistory = new ChatHistory();
+        chatHistory.addSystemMessage(openAiClientConfig.getSystemPrompt());
+    }
+
+    /**
+     * Retrieve AI response on user input.
+     *
+     * @param deploymentName Deployment name that should provide AI response
+     * @param message        User input message
+     * @return AI response on provided user input message
+     */
+    public String getResponse(String deploymentName, String message) {
+
+        var chatCompletion = getChatCompletion(deploymentName);
+
+        log.trace("User input: {}", message);
 
         chatHistory.addUserMessage(message);
 
-        /* Prompt AI for response to users input */
-        List<ChatMessageContent<?>> results = chatCompletionService
-                .getChatMessageContentsAsync(chatHistory, kernel, invocationContext)
-                .block();
+        var response = chatCompletion.getResponse(invocationContext, chatHistory);
 
-        if (results == null) {
-            logger.trace("Could NOT get AI response on user input");
-            return StringUtils.EMPTY;
-        }
-
-        var response = results.stream()
-                .filter(result -> result.getAuthorRole() == AuthorRole.ASSISTANT && result.getContent() != null)
-                .map(ChatMessageContent::getContent)
-                .collect(Collectors.joining(" "));
-
-        logger.trace("AI response on user input: {}", response);
+        log.trace("AI response: {}", response);
 
         chatHistory.addAssistantMessage(response);
 
         return response;
+    }
+
+    private ChatCompletable getChatCompletion(String deploymentName) {
+        if (DEFAULT_DEPLOYMENT_NAME.equals(deploymentName)) {
+            return defaultChatCompletion;
+        }
+        return chatCompletions.getOrDefault(deploymentName, defaultChatCompletion);
     }
 }

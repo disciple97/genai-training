@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+management:
+  server:
+    port: 8081
+    address: 127.0.0.1
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+client:
+  openai:
+    apiKey: ${API_KEY}
+    apiEndpoint: ${API_ENDPOINT:https://ai-proxy.lab.epam.com}
+    deploymentName: ${DEPLOYMENT_NAME:gpt-4}
+    executionTemperature: ${EXECUTION_TEMPERATURE:0.5}
+    systemPrompt: |
+      ${SYSTEM_PROMPT:You are friendly AI assistant that helps people find information about Microsoft products and services.
+      You decline to discuss any topic other than Microsoft products and services.}
+    deployments:
+      - name: gpt-4
+        model: gpt-4-turbo
+      - name: gpt-35
+        model: gpt-35-turbo
+      - name: google-gemini
+        model: gemini-pro
+      - name: google-bison
+        model: chat-bison
+      - name: ai21-jumbo
+        model: ai21.j2-jumbo-instruct
+      - name: ai21-grande
+        model: ai21.j2-grande-instruct
