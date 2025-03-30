@@ -1,10 +1,18 @@
 package com.epam.training.gen.ai.service;
 
+import com.google.gson.Gson;
+
 import com.azure.ai.openai.OpenAIAsyncClient;
 import com.epam.training.gen.ai.config.DeploymentConfig;
+import com.epam.training.gen.ai.service.plugin.DateTimePlugin;
+import com.epam.training.gen.ai.service.plugin.LightModel;
+import com.epam.training.gen.ai.service.plugin.LightsPlugin;
 import com.microsoft.semantickernel.Kernel;
 import com.microsoft.semantickernel.aiservices.openai.chatcompletion.OpenAIChatCompletion;
+import com.microsoft.semantickernel.contextvariables.ContextVariableTypeConverter;
+import com.microsoft.semantickernel.contextvariables.ContextVariableTypes;
 import com.microsoft.semantickernel.orchestration.InvocationContext;
+import com.microsoft.semantickernel.plugin.KernelPluginFactory;
 import com.microsoft.semantickernel.services.chatcompletion.AuthorRole;
 import com.microsoft.semantickernel.services.chatcompletion.ChatCompletionService;
 import com.microsoft.semantickernel.services.chatcompletion.ChatHistory;
@@ -21,7 +29,9 @@ public class ChatCompletion implements ChatCompletable {
     private final ChatCompletionService chatCompletionService;
     private final Kernel kernel;
 
-    public ChatCompletion(DeploymentConfig deploymentConfig, OpenAIAsyncClient openAIAsyncClient) {
+    public ChatCompletion(
+            DeploymentConfig deploymentConfig, OpenAIAsyncClient openAIAsyncClient, DateTimePlugin dateTimePlugin, LightsPlugin lightsPlugin
+    ) {
 
         this.name = deploymentConfig.name();
 
@@ -32,7 +42,11 @@ public class ChatCompletion implements ChatCompletable {
 
         this.kernel = Kernel.builder()
                 .withAIService(ChatCompletionService.class, chatCompletionService)
+                .withPlugin(KernelPluginFactory.createFromObject(dateTimePlugin, "DateTime"))
+                .withPlugin(KernelPluginFactory.createFromObject(lightsPlugin, "Lights"))
                 .build();
+
+        ContextVariableTypes.addGlobalConverter(ContextVariableTypeConverter.builder(LightModel.class).toPromptString(new Gson()::toJson).build());
     }
 
     @Override

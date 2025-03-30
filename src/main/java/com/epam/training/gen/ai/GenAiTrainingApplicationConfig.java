@@ -7,6 +7,8 @@ import com.epam.training.gen.ai.config.DeploymentConfig;
 import com.epam.training.gen.ai.config.OpenAiClientConfig;
 import com.epam.training.gen.ai.service.ChatCompletable;
 import com.epam.training.gen.ai.service.ChatCompletion;
+import com.epam.training.gen.ai.service.plugin.DateTimePlugin;
+import com.epam.training.gen.ai.service.plugin.LightsPlugin;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,8 +27,13 @@ public class GenAiTrainingApplicationConfig {
     }
 
     @Bean
-    public Map<String, ChatCompletable> chatCompletions(OpenAiClientConfig openAiClientConfig, OpenAIAsyncClient openAIAsyncClient) {
+    public Map<String, ChatCompletable> chatCompletions(
+            OpenAiClientConfig openAiClientConfig, OpenAIAsyncClient openAIAsyncClient, DateTimePlugin dateTimePlugin, LightsPlugin lightsPlugin
+    ) {
         return openAiClientConfig.getDeployments().stream()
-                .collect(Collectors.toMap(DeploymentConfig::name, deploymentConfig -> new ChatCompletion(deploymentConfig, openAIAsyncClient)));
+                .collect(Collectors.toMap(
+                        DeploymentConfig::name,
+                        deploymentConfig -> new ChatCompletion(deploymentConfig, openAIAsyncClient, dateTimePlugin, lightsPlugin)
+                ));
     }
 }
