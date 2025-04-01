@@ -17,8 +17,14 @@ public class GenAiTrainingApplicationConfig {
     @Value("${client-openai-deployment-name}")
     private String aiDeploymentName;
 
+    @Value("${execution-temperature}")
+    private double executionTemperature;
+
+    @Value("${system-prompt}")
+    private String systemPrompt;
+
     @Bean
     public OpenAiClientConfig openAiClientConfig() {
-        return new OpenAiClientConfig(aiKey, aiEndpoint, aiDeploymentName);
+        return new OpenAiClientConfig(aiKey, aiEndpoint, aiDeploymentName, executionTemperature, systemPrompt);
     }
 }

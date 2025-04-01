@@ -8,6 +8,7 @@ import com.microsoft.semantickernel.Kernel;
 import com.microsoft.semantickernel.aiservices.openai.chatcompletion.OpenAIChatCompletion;
 import com.microsoft.semantickernel.orchestration.InvocationContext;
 import com.microsoft.semantickernel.orchestration.InvocationReturnMode;
+import com.microsoft.semantickernel.orchestration.PromptExecutionSettings;
 import com.microsoft.semantickernel.orchestration.ToolCallBehavior;
 import com.microsoft.semantickernel.services.chatcompletion.AuthorRole;
 import com.microsoft.semantickernel.services.chatcompletion.ChatCompletionService;
@@ -29,6 +30,7 @@ public class ChatService {
     private final ChatCompletionService chatCompletionService;
     private final Kernel kernel;
     private final InvocationContext invocationContext;
+    private final ChatHistory chatHistory;
 
     public ChatService(OpenAiClientConfig openAiClientConfig) {
 
@@ -50,19 +52,24 @@ public class ChatService {
         this.invocationContext = new InvocationContext.Builder()
                 .withReturnMode(InvocationReturnMode.LAST_MESSAGE_ONLY)
                 .withToolCallBehavior(ToolCallBehavior.allowAllKernelFunctions(true))
+                .withPromptExecutionSettings(
+                        PromptExecutionSettings.builder().withTemperature(openAiClientConfig.executionTemperature()).build()
+                )
                 .build();
+
+        this.chatHistory = new ChatHistory();
+        this.chatHistory.addSystemMessage(openAiClientConfig.systemPrompt());
     }
 
     public String getResponse(String message) {
 
         logger.trace("User input: {}", message);
 
-        ChatHistory history = new ChatHistory();
-        history.addUserMessage(message);
+        chatHistory.addUserMessage(message);
 
         /* Prompt AI for response to users input */
         List<ChatMessageContent<?>> results = chatCompletionService
-                .getChatMessageContentsAsync(history, kernel, invocationContext)
+                .getChatMessageContentsAsync(chatHistory, kernel, invocationContext)
                 .block();
 
         if (results == null) {
@@ -76,6 +83,8 @@ public class ChatService {
                 .collect(Collectors.joining(" "));
 
         logger.trace("AI response on user input: {}", response);
+
+        chatHistory.addAssistantMessage(response);
 
         return response;
     }
