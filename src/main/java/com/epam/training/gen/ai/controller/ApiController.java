@@ -3,20 +3,22 @@ package com.epam.training.gen.ai.controller;
 import com.epam.training.gen.ai.api.ApiRequest;
 import com.epam.training.gen.ai.api.ApiResponse;
 import com.epam.training.gen.ai.service.ChatService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
+
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
+@Slf4j
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/chat")
 public class ApiController {
-
-    private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
 
     private final ChatService chatService;
 
@@ -24,12 +26,25 @@ public class ApiController {
         this.chatService = chatService;
     }
 
-    @PostMapping(value = "/chat", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-    public ApiResponse handlePostChatRequest(@RequestBody ApiRequest apiRequest) {
-        logger.trace("Input API request: {}", apiRequest);
-        var response = chatService.getResponse(apiRequest.getInput());
+    @GetMapping(value = "/deployment-names", produces = APPLICATION_JSON_VALUE)
+    public Set<String> getDeploymentNames() {
+        var deploymentNames = chatService.getDeploymentNames();
+        log.trace("Deployment names: {}", deploymentNames);
+        return deploymentNames;
+    }
+
+    @GetMapping(value = "/reset-history")
+    public void resetChatHistory() {
+        chatService.resetChatHistory();
+        log.trace("Chat history has been reset");
+    }
+
+    @PostMapping(value = "/{deploymentName}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+    public ApiResponse handlePostChatRequest(@PathVariable String deploymentName, @RequestBody ApiRequest apiRequest) {
+        log.trace("Input API request: {}", apiRequest);
+        var response = chatService.getResponse(deploymentName, apiRequest.getInput());
         var apiResponse = new ApiResponse(response);
-        logger.trace("Output API response: {}", apiResponse);
+        log.trace("Output API response: {}", apiResponse);
         return apiResponse;
     }
 }
