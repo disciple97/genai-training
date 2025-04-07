@@ -1,30 +1,32 @@
 package com.epam.training.gen.ai;
 
+import com.azure.ai.openai.OpenAIAsyncClient;
+import com.azure.ai.openai.OpenAIClientBuilder;
+import com.azure.core.credential.AzureKeyCredential;
+import com.epam.training.gen.ai.config.DeploymentConfig;
 import com.epam.training.gen.ai.config.OpenAiClientConfig;
-import org.springframework.beans.factory.annotation.Value;
+import com.epam.training.gen.ai.service.ChatCompletable;
+import com.epam.training.gen.ai.service.ChatCompletion;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Configuration
 public class GenAiTrainingApplicationConfig {
 
-    @Value("${client-openai-key}")
-    private String aiKey;
-
-    @Value("${client-openai-endpoint}")
-    private String aiEndpoint;
-
-    @Value("${client-openai-deployment-name}")
-    private String aiDeploymentName;
-
-    @Value("${execution-temperature}")
-    private double executionTemperature;
-
-    @Value("${system-prompt}")
-    private String systemPrompt;
+    @Bean
+    public OpenAIAsyncClient openAIAsyncClient(OpenAiClientConfig openAiClientConfig) {
+        return new OpenAIClientBuilder()
+                .credential(new AzureKeyCredential(openAiClientConfig.getApiKey()))
+                .endpoint(openAiClientConfig.getApiEndpoint())
+                .buildAsyncClient();
+    }
 
     @Bean
-    public OpenAiClientConfig openAiClientConfig() {
-        return new OpenAiClientConfig(aiKey, aiEndpoint, aiDeploymentName, executionTemperature, systemPrompt);
+    public Map<String, ChatCompletable> chatCompletions(OpenAiClientConfig openAiClientConfig, OpenAIAsyncClient openAIAsyncClient) {
+        return openAiClientConfig.getDeployments().stream()
+                .collect(Collectors.toMap(DeploymentConfig::name, deploymentConfig -> new ChatCompletion(deploymentConfig, openAIAsyncClient)));
     }
 }
