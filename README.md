@@ -143,3 +143,46 @@ curl -X POST --location localhost:8080/api/embedding/search -H "Content-Type: ap
 curl -X POST --location localhost:8080/api/embedding/search -H "Content-Type: application/json" -d '{"input": "chicken"}'
 {"id":3,"score":0.83729327,"value":"tiger"}
 ```
+
+# Module 6
+
+## Vector data storage
+
+```shell
+curl --location localhost:6333
+{"title":"qdrant - vector search engine","version":"1.14.0","commit":"3617a0111fc8590c4adcc6e88882b63ca4dda9e7"}
+```
+
+## Save embedding from text files
+
+```shell
+for num in 1 2 3 4 5 6 7; do
+  curl -X POST --location localhost:8080/api/embedding/save -H "Content-Type: application/json" -d "@./data/data-0${num}.json"
+done
+```
+
+## Find context and get response with RAG
+
+```shell
+curl -X POST localhost:8080/api/chat/default/rag -H "Content-Type: application/json" -H "Accept: application/json" -d '{"input": "Provide at least 3 nicknames of Prague."}'
+Found context: id=2, score=0.85096014
+{"output":"1. The City of a Hundred Spires\n2. The Golden City\n3. The Mother of Cities"}
+```
+
+```shell
+curl -X POST localhost:8080/api/chat/default/rag -H "Content-Type: application/json" -H "Accept: application/json" -d '{"input": "What is the average temperature in winter?"}'
+Found context: id=3, score=0.8343376
+{"output":"The average temperature in winter in Prague is around the freezing point, 0 °C (32 °F)."}
+```
+
+```shell
+curl -X POST localhost:8080/api/chat/default/rag -H "Content-Type: application/json" -H "Accept: application/json" -d '{"input": "How many districts are there?"}'
+Found context: id=4, score=0.79216146
+{"output":"Prague is divided into several types of districts:\n\n- 10 municipal districts (numbered 1–10)\n- 22 administrative districts (numbered 1–22)\n- 57 municipal parts\n- 112 cadastral areas\n\nIn total, there are different categories of districts and areas, each serving different administrative purposes."}
+```
+
+```shell
+curl -X POST localhost:8080/api/chat/default/rag -H "Content-Type: application/json" -H "Accept: application/json" -d '{"input": "How many metro lines are there?"}'
+Found context: id=7, score=0.8309677
+{"output":"Prague has three major metro lines: A (green), B (yellow), and C (red). A fourth metro line, D, is under construction."}
+```
