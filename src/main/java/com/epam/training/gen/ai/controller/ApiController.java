@@ -47,4 +47,13 @@ public class ApiController {
         log.trace("Output API response: {}", apiResponse);
         return apiResponse;
     }
+
+    @PostMapping(value = "/{deploymentName}/rag", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+    public ApiResponse handlePostChatRagRequest(@PathVariable String deploymentName, @RequestBody ApiRequest apiRequest) {
+        log.trace("Input API RAG request: {}", apiRequest);
+        var response = chatService.getRagResponse(deploymentName, apiRequest.getInput());
+        var apiResponse = new ApiResponse(response);
+        log.trace("Output API RAG response: {}", apiResponse);
+        return apiResponse;
+    }
 }

@@ -32,3 +32,8 @@ client:
         model: ai21.j2-jumbo-instruct
       - name: ai21-grande
         model: ai21.j2-grande-instruct
+  embedding:
+    vectorStorageHost: ${VECTOR_STORAGE_HOST:localhost}
+    vectorStoragePort: ${VECTOR_STORAGE_PORT:6334}
+    deploymentName: ${EMBEDDINGS_DEPLOYMENT_NAME:text-embedding-ada-002}
+    vectorSize: ${VECTOR_SIZE:1536}

@@ -8,9 +8,11 @@ import com.microsoft.semantickernel.orchestration.ToolCallBehavior;
 import com.microsoft.semantickernel.services.chatcompletion.ChatHistory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 @Slf4j
 @Service
@@ -22,10 +24,11 @@ public class ChatService {
     private final ChatCompletable defaultChatCompletion;
     private final Map<String, ChatCompletable> chatCompletions;
     private final InvocationContext invocationContext;
+    private final EmbeddingService embeddingService;
 
     private ChatHistory chatHistory;
 
-    public ChatService(OpenAiClientConfig openAiClientConfig, Map<String, ChatCompletable> chatCompletions) {
+    public ChatService(OpenAiClientConfig openAiClientConfig, Map<String, ChatCompletable> chatCompletions, EmbeddingService embeddingService) {
 
         this.openAiClientConfig = openAiClientConfig;
 
@@ -48,6 +51,8 @@ public class ChatService {
                 .build();
 
         resetChatHistory();
+
+        this.embeddingService = embeddingService;
     }
 
     /**
@@ -63,8 +68,18 @@ public class ChatService {
      * Reset chat history and set default system prompt.
      */
     public void resetChatHistory() {
+        resetChatHistory(null);
+    }
+
+    public void resetChatHistory(@Nullable String extraSystemPrompt) {
         chatHistory = new ChatHistory();
-        chatHistory.addSystemMessage(openAiClientConfig.getSystemPrompt());
+        var systemPrompt = openAiClientConfig.getSystemPrompt();
+        if (StringUtils.hasLength(systemPrompt)) {
+            chatHistory.addSystemMessage(systemPrompt);
+        }
+        if (StringUtils.hasLength(extraSystemPrompt)) {
+            chatHistory.addSystemMessage(extraSystemPrompt);
+        }
     }
 
     /**
@@ -96,5 +111,12 @@ public class ChatService {
             return defaultChatCompletion;
         }
         return chatCompletions.getOrDefault(deploymentName, defaultChatCompletion);
+    }
+
+    public String getRagResponse(String deploymentName, String message) {
+        var context = embeddingService.search(message);
+        log.trace("Found context: {}", context);
+        resetChatHistory(context.value());
+        return getResponse(deploymentName, message);
     }
 }
