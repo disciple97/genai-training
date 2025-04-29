@@ -102,3 +102,44 @@ This plugin manages lights.
 | 2 | turn on a light with ID 2        | The porch light with ID 2 is now turned on. Is there anything else you need help with?                                                                                                                                                    |
 | 3 | what is the state of all lights? | Here is the current state of all the lights:\n\n- **Table Lamp (ID 1):** On\n- **Porch Light (ID 2):** On\n- **Chandelier (ID 3):** Off\n\nWould you like to change the state of any other lights or need assistance with something else? |
 | 4 | turn off all turned on lights    | All lights are now turned off. Is there anything else I can assist you with today?                                                                                                                                                        |
+
+# Module 5
+
+## Vector data storage
+
+```shell
+curl --location localhost:6333
+{"title":"qdrant - vector search engine","version":"1.14.0","commit":"3617a0111fc8590c4adcc6e88882b63ca4dda9e7"}
+```
+
+## Retrieve embedding
+
+```shell
+curl -X POST --location localhost:8080/api/embedding/get -H "Content-Type: application/json" -d '{"input": "Can you help me to write a poem"}' 
+{"input":"Can you help me to write a poem","embedding":[-0.018773237,0.006905687,-3.7965292E-4,-0.005716374,-0.007417219,0.053966664,-0.022136563,...]}
+```
+
+## Save embedding from text
+
+```shell
+curl -X POST --location localhost:8080/api/embedding/save -H "Content-Type: application/json" -d '{"id": 1, "input": "dog"}'
+
+curl -X POST --location localhost:8080/api/embedding/save -H "Content-Type: application/json" -d '{"id": 2, "input": "cat"}'
+
+curl -X POST --location localhost:8080/api/embedding/save -H "Content-Type: application/json" -d '{"id": 3, "input": "tiger"}'
+
+curl -X POST --location localhost:8080/api/embedding/save -H "Content-Type: application/json" -d '{"id": 4, "input": "wolf"}'
+```
+
+Search for closest embedding
+
+```shell
+curl -X POST --location localhost:8080/api/embedding/search -H "Content-Type: application/json" -d '{"input": "cat"}'  
+{"id":2,"score":0.99999714,"value":"cat"}
+
+curl -X POST --location localhost:8080/api/embedding/search -H "Content-Type: application/json" -d '{"input": "puppy"}'
+{"id":1,"score":0.873476,"value":"dog"}
+
+curl -X POST --location localhost:8080/api/embedding/search -H "Content-Type: application/json" -d '{"input": "chicken"}'
+{"id":3,"score":0.83729327,"value":"tiger"}
+```
